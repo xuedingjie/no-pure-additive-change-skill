@@ -2,7 +2,7 @@
 
 Use this file to calibrate the generic skill to a specific project.
 
-Do not leave placeholders for high-risk areas. If the project cannot identify source of truth, valid data filters, amount/status semantics, or high-risk tables/services, the agent must treat related changes as not ready for implementation.
+Do not leave placeholders for high-risk areas. If the project cannot identify source of truth, valid data filters, field/status semantics, or high-risk tables/services, the agent must treat related changes as not ready for implementation.
 
 ## P0 Tables
 
@@ -10,9 +10,9 @@ P0 tables reject pure additive implementation by default.
 
 | table | type | approximate rows | size | why high risk |
 |---|---|---:|---:|---|
-| example_order | core aggregate |  |  | current business state |
-| example_bill | money/accounting |  |  | bill authority |
-| example_payment_log | money/event log |  |  | payment side effects |
+| example_core_record | core aggregate |  |  | current business state |
+| example_external_event | integration event |  |  | external event side effects |
+| example_audit_history | audit/history |  |  | historical traceability |
 
 ## P1 Tables
 
@@ -26,8 +26,8 @@ P1 tables require explicit comparison between minimal additive implementation an
 
 | service/module/class | risk level | why high risk |
 |---|---|---|
-| ExampleOrderService | P0 | owns current state and many workflow branches |
-| ExamplePaymentService | P0 | writes money-related side effects |
+| ExampleCoreService | P0 | owns current state and many workflow branches |
+| ExampleEventService | P0 | writes integration or event side effects |
 
 ## Source Of Truth Map
 
@@ -39,15 +39,14 @@ P1 tables require explicit comparison between minimal additive implementation an
 - Valid record filters:
 - Change rule:
 
-### Money, Balance, Billing, Payment, Refund, Settlement
+### Derived Values And Business Attributes
 
 - Authoritative table/field:
 - Event/log table:
-- Amount unit:
-- Precision/rounding:
-- Sign direction:
+- Field meaning:
+- Unit/precision/value range, if relevant:
 - Valid record filters:
-- Reconciliation path:
+- Verification path:
 - Change rule:
 
 ### State Flow And Operation History
@@ -78,25 +77,25 @@ All business domains must first confirm valid persisted database facts:
 - indexes
 - transaction boundary
 - effective-record filters
-- amount unit/precision/sign when relevant
+- field semantics and value range when relevant
 - status semantics when relevant
-- reconciliation path when relevant
+- verification path when relevant
 
 If callbacks, retries, scheduled jobs, duplicate requests, or concurrent state changes are involved, assume multiple service instances or pods and cover idempotency and race conditions.
 
-### Example Domain: Order
+### Example Domain: Core Workflow
 
 - create/cancel/update/detail/list/export
-- current state and sub-state transitions
+- state and sub-state transitions
 - operation logs and state-flow records
 - forbidden operations under abnormal statuses
 
-### Example Domain: Billing And Payment
+### Example Domain: Derived Or Stored Attributes
 
-- bill generation/close/overdue/prepayment
-- payment callback/refund/retry
-- account flow and payment log side effects
-- duplicate payment, duplicate callback, amount unit, precision, sign, reconciliation
+- field creation/update/backfill
+- compatible reads during migration
+- derived value consistency
+- duplicate event handling and verification
 
 ### Example Domain: Provider Integration
 
@@ -111,7 +110,7 @@ Update this context map when:
 - high-risk service list changes
 - source-of-truth ownership changes
 - valid record filters change
-- amount unit, precision, sign direction, or reconciliation rules change
+- field semantics, value range, or verification rules change
 - status semantics or current/history/provider-state ownership changes
 - new core tables, extension tables, state-flow tables, or provider record tables are introduced
 - production table volume crosses an order of magnitude

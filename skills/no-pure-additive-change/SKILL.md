@@ -1,6 +1,6 @@
 ---
 name: no-pure-additive-change
-description: Use when a backend requirement adds or changes fields, tables, statuses, enums, channels, provider data, callbacks, pushes, jobs, statistics, indexes, business branches, persistent state, or model boundaries in a codebase with additive-change risk
+description: Use when a new backend requirement adds or changes fields, tables, statuses, enums, channels, provider data, callbacks, pushes, jobs, statistics, indexes, business branches, persistent state, or model boundaries in a codebase with additive-change risk
 ---
 
 # No Pure Additive Change
@@ -15,7 +15,7 @@ For low-risk areas, local model correction is preferred over minimal additive im
 
 The goal is not broad refactoring. The goal is bounded, evidence-backed model correction with migration, rollback, migration tests, and business tests.
 
-Design must prioritize valid persisted database facts over transient application assumptions. A database fact is not valid merely because a table, field, or row exists. Whether the recommendation is minimal additive or refactor, treat database rows, constraints, indexes, write paths, reconciliation queries, and data validity conditions as the primary evidence of business truth. Then evaluate execution efficiency.
+Design must prioritize valid persisted database facts over transient application assumptions. A database fact is not valid merely because a table, field, or row exists. Whether the recommendation is minimal additive or refactor, treat database rows, constraints, indexes, write paths, verification queries, and data validity conditions as the primary evidence of business truth. Then evaluate execution efficiency.
 
 When the change can involve races, retries, callbacks, scheduled jobs, duplicate requests, or concurrent state changes, assume the service may be deployed as multiple instances or pods. Do not rely on in-memory locks, local caches, static variables, or single-process ordering for correctness.
 
@@ -38,7 +38,7 @@ Use this skill when the request mentions or implies:
 - add callback, push, sync, batch job, scheduled job, statistic, cache, report
 - add provider-specific request/response/result fields
 - change persistent business state
-- change money, balance, bill, payment, refund, settlement, account flow, freeze/release, financing, risk, contract, callback, or state-flow logic
+- change lifecycle, external integration, audit/history, callback, or state-flow logic
 - add another branch to an existing service
 - add another table/field because the current model does not fit
 - split, merge, rename, migrate, reinterpret, or backfill data
@@ -59,29 +59,29 @@ An evidence line must include:
 
 Unsupported claims must be marked as assumptions.
 
-If an assumption affects source of truth, money, status, migration, rollback, or business correctness, stop and ask for confirmation.
+If an assumption affects source of truth, persistent state, status, migration, rollback, or business correctness, stop and ask for confirmation.
 
 Evidence must prioritize database persistence facts:
 
 - table and field where the business fact is stored
-- business meaning of the field, including unit, sign, precision, status semantics, and valid record conditions
+- business meaning of the field, including field semantics, status semantics when relevant, value range when relevant, and valid record conditions
 - unique key, idempotency key, or natural key
-- indexes used by reads, writes, reconciliation, or migration
+- indexes used by reads, writes, consistency checks, or migration
 - insert/update/delete paths
 - queries that derive current state or historical facts
-- filters that distinguish valid, deleted, voided, reversed, failed, test, historical, temporary, or migrated records
-- reconciliation evidence for money, balance, bill, payment, refund, settlement, freeze/release, financing, provider, and account-flow data
+- filters that distinguish valid, deleted, failed, test, historical, temporary, or migrated records
+- consistency or verification evidence for authoritative, derived, and provider data
 - transaction boundary and lock/compare-and-set behavior when relevant
 
 Code evidence is still required, but code behavior must be checked against persisted database facts.
 
-For money, balance, accounting, settlement, billing, payment, refund, freeze, financing, or risk-related facts, evidence must also answer:
+For persisted fields, statuses, and external events, evidence must also answer:
 
-- Is the amount unit clear, such as cent, yuan, dollar, milli, basis point, or provider-specific unit?
-- Is the sign direction clear, such as receivable, payable, refund, freeze, release, debit, credit, income, or expense?
-- Does the status represent current state, historical event, failed attempt, or external provider state?
-- Are voided, failed, reversed, deleted, test, historical, temporary, or migrated records excluded correctly?
-- Can the result reconcile against authoritative business records or provider records?
+- Is the field meaning clear enough for the current requirement?
+- Is the field value range, unit, precision, or enum mapping clear when relevant?
+- Is the status meaning and ownership clear when relevant?
+- Are invalid, deleted, failed, test, historical, temporary, or migrated records excluded correctly when relevant?
+- Can the result be verified against authoritative, derived, or provider records?
 
 ## Evidence Levels
 
@@ -97,8 +97,8 @@ Example:
 
 ```markdown
 **Evidence Lines**
-- E1 `module/path/OrderServiceImpl.java:123`: this method reads order status and decides the next workflow step, so the change affects current-state judgment.
-- E2 `references/context-map.md:P0 Tables`: `order_bill` is marked as a P0 money/accounting table, so field changes require migration and business regression tests.
+- E1 `module/path/LifecycleService.java:123`: this method reads persisted status and decides the next workflow step, so the change affects state judgment.
+- E2 `references/context-map.md:P0 Tables`: `core_record` is marked as a P0 source-of-truth table, so field changes require migration and business regression tests.
 - E4 `column_name=provider_result`: the field name indicates provider-specific semantics, but no business normalization logic was found.
 - A Assumption: `status=3` means closed; business confirmation is required.
 ```
@@ -111,7 +111,7 @@ Example:
 4. Check the source-of-truth section in the project context map for the relevant business concept.
 5. Inspect code around entity/model, mapper/DAO, SQL, repository/accessor, service, controller, job, facade/client, and provider integration boundaries.
 6. Identify the database write path, read path, unique/idempotency key, index usage, and transaction boundary for the touched business fact.
-7. Identify whether the database evidence is valid for the business question: units, status semantics, effective record filters, deleted/failed/reversed/test/historical/temporary/migrated data, and reconciliation path.
+7. Identify whether the database evidence is valid for the business question: field semantics, status semantics, effective record filters, deleted/failed/test/historical/temporary/migrated data, and verification path.
 8. If concurrency is possible, identify whether correctness holds across multiple instances or pods.
 
 Use semantic search only when it is available. Otherwise, use exact search.
@@ -194,7 +194,7 @@ Must include:
 
 ### Option C: Controlled Evolutionary Refactor
 
-Use for P0/P1 areas when additive change would worsen source-of-truth, state, accounting, provider-boundary, or service responsibility problems.
+Use for P0/P1 areas when additive change would worsen source-of-truth, state, provider-boundary, or service responsibility problems.
 
 Must be bounded and compatible.
 
@@ -207,7 +207,7 @@ Requires:
 - staged rollout
 - dual-write or read compatibility if needed
 - backfill
-- reconciliation
+- consistency checks
 - rollback
 - multi-instance race and idempotency design when concurrent writes/events are possible
 - business regression test matrix
@@ -228,7 +228,7 @@ If any smell appears in the touched area, Minimal Additive cannot be recommended
 
 ## Migration Requires Tests
 
-Any data migration, backfill, dual-write, read compatibility, field split, table split, status mapping, amount recalculation, provider data relocation, or source-of-truth change must include a migration test plan.
+Any data migration, backfill, dual-write, read compatibility, field split, table split, status mapping, derived value recalculation, provider data relocation, or source-of-truth change must include a migration test plan.
 
 A migration plan without tests is incomplete.
 
@@ -257,7 +257,7 @@ Migration test plan template:
 **Migration Test Plan**
 - Mapping tests:
 - null/default/unknown tests:
-- Reconciliation tests:
+- Consistency verification tests:
 - Idempotency tests:
 - Compatible read tests:
 - Rollback tests:
@@ -271,7 +271,7 @@ Migration test plan template:
 
 Any non-pure-additive implementation must include a business test plan.
 
-If the change refactors model, table, state, amount, callback, job, service, handler, pusher, strategy, policy, processor, or source-of-truth logic, the design is incomplete until it specifies:
+If the change refactors model, table, state, persisted field, callback, job, service, handler, pusher, strategy, policy, processor, or source-of-truth logic, the design is incomplete until it specifies:
 
 1. migration tests, if data moves or is reinterpreted
 2. business regression tests for affected user/system workflows
@@ -340,13 +340,11 @@ For every refactor, list the business invariants that must remain true.
 
 Examples:
 
-- paid bill cannot be paid again
-- account flow must not be duplicated for the same payment event
+- the same external event must not create duplicate business effects
 - current state and latest state-change event cannot conflict without documented reason
-- frozen amount cannot exceed expected freeze amount
-- duplicate callback must not create duplicate business effects
-- provider raw callback record must be preserved even if business handling fails
-- rollback must not lose original provider payload
+- invalid or deleted records must not be treated as active business facts
+- provider raw callback record must be preserved when the project requires auditing
+- rollback must not lose original persisted data needed for recovery
 
 ## Service Rules
 
@@ -393,9 +391,9 @@ Before editing code, output this block:
 - Current authority:
 - Persisted database fact:
 - Data validity conditions:
-- Amount unit/sign/precision, if relevant:
 - Status semantics, if relevant:
-- Reconciliation/check path:
+- Field semantics/value range, if relevant:
+- Verification path:
 - Write path:
 - Read/derivation path:
 - Whether this creates a second truth source:
@@ -438,8 +436,8 @@ Before editing code, output this block:
 - Transaction boundary:
 - Query/write efficiency:
 - Effective-record filters:
-- Amount unit/precision/sign:
-- Financial/accounting/business reconciliation:
+- Field semantics/value range:
+- Business consistency verification:
 - null/default:
 - backfill:
 - rollback:
@@ -490,14 +488,14 @@ Stop before implementation if:
 - source of truth is unclear
 - persisted database fact is unclear
 - persisted database fact is not proven valid for the business question
-- effective-record filters are unclear for deleted, failed, reversed, voided, test, historical, temporary, or migrated data
-- amount unit, precision, or sign direction is unclear for money-related facts
-- status semantics are unclear, including current state, historical event, failed attempt, or external provider state
-- reconciliation path is unclear for money, balance, bill, payment, refund, settlement, freeze/release, financing, provider, or account-flow facts
+- effective-record filters are unclear for deleted, failed, test, historical, temporary, or migrated data
+- field semantics, value range, unit, precision, or enum mapping is unclear when relevant
+- status semantics or ownership is unclear when relevant
+- verification path is unclear for authoritative, derived, or provider facts
 - target table risk is unknown
 - target service risk is unknown
 - claim has no evidence line
-- assumption affects money, status, migration, rollback, or source of truth
+- assumption affects persistent state, status, migration, rollback, or source of truth
 - query/write efficiency is not evaluated for affected database paths
 - race-sensitive change has no multi-instance idempotency or locking design
 - migration exists but migration test plan is missing
@@ -516,7 +514,7 @@ Before claiming ready to implement:
 - source of truth is identified
 - persisted database fact is proven valid for the business question
 - write path, read path, effective-record filters, and efficiency are addressed
-- amount unit, precision, sign direction, status semantics, and reconciliation path are addressed when relevant
+- field semantics, value range, status semantics, and verification path are addressed when relevant
 - multi-instance race handling is addressed when concurrency is possible
 - minimal additive and local correction/evolutionary refactor are compared
 - migration plan exists when data moves or is reinterpreted

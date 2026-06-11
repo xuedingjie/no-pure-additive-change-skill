@@ -4,7 +4,9 @@
 
 This repository contains a generic rule + skill package for AI coding agents.
 
-It is intended for backend systems where feature requests often become pure additive changes: adding one more field, table, enum, status, branch, callback, job, statistic, or provider-specific payload without checking whether the model should be corrected.
+It is intended for backend systems where new feature requests often become pure additive changes: adding one more field, table, enum, status, branch, callback, job, statistic, or provider-specific payload without checking whether the model should be corrected.
+
+This repository is not tied to any business domain. It does not assume any industry-specific model. It only provides a generic workflow for identifying and constraining pure additive implementation of new requirements.
 
 The goal is not broad refactoring. The goal is to force the agent to make an evidence-backed design judgment before implementation:
 
@@ -20,7 +22,7 @@ The goal is not broad refactoring. The goal is to force the agent to make an evi
 - The agent must compare minimal additive implementation with local model correction or evolutionary refactor.
 - Claims must include evidence lines; unsupported claims must be marked as assumptions.
 - Persisted database facts have priority over code assumptions.
-- Persisted data is valid evidence only after effective-record filters, amount semantics, status semantics, write/read paths, indexes, reconciliation, and concurrency behavior are checked.
+- Persisted data is valid evidence only after field semantics, effective-record filters, status semantics, write/read paths, indexes, verification paths, and concurrency behavior are checked.
 - Data migration requires a migration test plan.
 - Behavioral refactor requires business regression tests and business invariants.
 - Race-sensitive logic must be designed for multi-instance or multi-pod deployment.
@@ -32,16 +34,16 @@ The agent must explain:
 
 - authoritative table and field
 - business meaning of the field
-- amount unit, precision, and sign direction when relevant
+- unit, precision, value range, or enum meaning when relevant
 - status semantics when relevant
 - valid record filters
-- deleted, failed, reversed, voided, test, historical, temporary, and migrated record exclusions
+- deleted, failed, test, historical, temporary, and migrated record exclusions when relevant
 - write path, read path, and derivation path
 - unique key, idempotency key, or natural key
-- indexes used by reads, writes, migration, and reconciliation
+- indexes used by reads, writes, migration, and verification
 - transaction boundary
 - correctness under multiple instances or pods
-- reconciliation path against authoritative business or provider records
+- verification path against authoritative, derived, or provider records
 
 If these cannot be answered, the design is not ready for implementation.
 
@@ -73,9 +75,9 @@ Before relying on it in a real codebase, maintainers should fill in:
 - P0/P1 tables
 - high-risk services or modules
 - source-of-truth map
-- amount/status semantics
+- field and status semantics
 - effective-record filters
-- reconciliation paths
+- verification paths
 - migration and rollback conventions
 - deployment model and concurrency assumptions
 
