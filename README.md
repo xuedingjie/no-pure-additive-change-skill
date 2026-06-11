@@ -160,4 +160,4 @@ Agent 在实现前应输出类似下面的判断块：
 
 ## License
 
-未指定许可证前，请按私有知识资产处理。
+本项目使用 [MIT License](LICENSE)。

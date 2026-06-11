@@ -83,4 +83,4 @@ Do not treat this package as a substitute for business evidence. It forces the a
 
 ## License
 
-Treat this repository as private knowledge unless a license is added.
+This project is licensed under the [MIT License](LICENSE).
